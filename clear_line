@@ -1,0 +1,67 @@
+#!/bin/csh
+#
+# 2014/9/02 : exclude the smd pad, Will shave the all smd space by shave_smd_auto
+#
+
+if (! $?STEP) then
+	PAUSE Please open a step first
+	exit
+endif 
+
+COM affected_layer,mode=all,affected=no
+COM clear_layers
+COM affected_filter,filter=(type=signal|power_ground|mixed|components|mask&context=board)
+COM get_affect_layer
+set layers = ($COMANS)
+COM affected_layer,mode=all,affected=no
+
+source /genesis/sys/scripts/common.cshrc
+gui_p
+gui_out WIN 400 200
+gui_out FONT tbi18
+gui_out BG 809050
+gui_out LABEL select the layers to clear the lines
+gui_out LIST lay 10 m
+foreach ly ($layers)
+	gui_out $ly
+end
+gui_out exit
+gui_out END
+dogui
+
+if ("$lay" == exit) then
+        exit 0
+endif
+
+VOF
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+foreach ly ($lay) 
+	COM affected_layer,mode=single,name=$ly,affected=yes
+end
+
+PAUSE Warning, This scripts will delete the attributes except .imp_line
+
+## design to rout
+COM reset_filter_criteria,filter_name=,criteria=all
+COM set_filter_type,filter_name=,lines=yes,pads=no,surfaces=no,arcs=yes,text=no
+COM set_filter_polarity,filter_name=,positive=yes,negative=no
+COM reset_filter_criteria,filter_name=,criteria=profile
+COM reset_filter_criteria,filter_name=,criteria=inc_attr
+COM reset_filter_criteria,filter_name=,criteria=exc_attr
+COM set_filter_attributes,filter_name=,exclude_attributes=yes,condition=no,attribute=.imp_line,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=
+COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+COM reset_filter_criteria,filter_name=,criteria=text
+COM reset_filter_criteria,filter_name=,criteria=dcode
+COM reset_filter_criteria,filter_name=,criteria=net
+COM adv_filter_reset
+COM set_filter_length
+COM set_filter_angle
+COM filter_area_strt
+COM filter_area_end,filter_name=popup,operation=select
+COM get_select_count
+if ($COMANS > 0) then
+	COM sel_design2rout,det_tol=0.1,con_tol=0.1,rad_tol=0.01
+endif
+
