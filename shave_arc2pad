@@ -1,0 +1,213 @@
+#!/bin/csh
+
+# Purpose: use for shave the pad2arc space 
+source $INCAM_SERVER/site_data/scripts/common.cshrc
+
+if (! $?STEP) then
+	PAUSE Please open a step first!
+endif
+
+COM affected_layer,mode=all,affected=no
+COM clear_layers
+COM affected_filter,filter=(type=signal|power_ground|mixed|components|mask&context=board&pol=positive)
+COM get_affect_layer
+set bdlay = ($COMANS)
+
+gui_p
+gui_out WIN 400 200
+gui_out FONT tbi18
+gui_out BG 809050
+gui_out TEXT space 4 pad to line space
+gui_out DTEXT space 2.75
+#gui_out TEXT lsring 4 min laser ring
+#gui_out DTEXT lsring 3.0
+#gui_out TEXT viaring 4 min via ring
+#gui_out DTEXT viaring 3.7
+gui_out LIST wkly 5 s
+foreach ly ($bdlay) 
+	gui_out $ly
+end
+gui_out exit
+gui_out END
+dogui
+
+set lsring = 3.0
+set viaring = 3.7
+
+if ($wkly == exit ) then
+	exit
+endif
+
+VOF
+COM delete_layer,layer=$wkly-arc-bk1
+COM delete_layer,layer=$wkly-arc-tmp
+COM delete_layer,layer=$wkly-arc-neg
+COM delete_layer,layer=$wkly-neg-tmp
+
+COM affected_layer,mode=all,affected=no
+COM clear_layers
+COM affected_layer,name=$wkly,mode=single,affected=yes
+COM get_affect_layer
+set bdlay = ($COMANS)
+COM sel_copy_other,dest=layer_name,target_layer=$wkly-arc-bk1,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+COM sel_copy_other,dest=layer_name,target_layer=$wkly-arc-tmp,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+
+COM affected_layer,mode=all,affected=no
+COM clear_layers
+COM affected_layer,name=$wkly-arc-bk1,mode=single,affected=yes
+
+### arc to line
+COM reset_filter_criteria,filter_name=,criteria=all
+COM set_filter_type,filter_name=,lines=no,pads=no,surfaces=no,arcs=yes,text=no
+COM set_filter_polarity,filter_name=,positive=yes,negative=no
+COM reset_filter_criteria,filter_name=,criteria=profile
+COM reset_filter_criteria,filter_name=,criteria=inc_attr
+COM reset_filter_criteria,filter_name=,criteria=exc_attr
+COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+COM reset_filter_criteria,filter_name=,criteria=text
+COM reset_filter_criteria,filter_name=,criteria=dcode
+COM reset_filter_criteria,filter_name=,criteria=net
+COM adv_filter_reset
+COM set_filter_length
+COM set_filter_angle
+COM filter_area_strt
+COM filter_area_end,filter_name=popup,operation=select
+COM get_select_count
+if ($COMANS == 0) then
+	PAUSE didn't find arc in line $wkly, exit
+	exit
+else
+	##  check negative feature
+	COM reset_filter_criteria,filter_name=,criteria=all
+	COM set_filter_type,filter_name=,lines=yes,pads=yes,surfaces=yes,arcs=yes,text=yes
+	COM set_filter_polarity,filter_name=,positive=no,negative=yes
+	COM reset_filter_criteria,filter_name=,criteria=profile
+	COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	COM reset_filter_criteria,filter_name=,criteria=text
+	COM reset_filter_criteria,filter_name=,criteria=dcode
+	COM reset_filter_criteria,filter_name=,criteria=net
+	COM adv_filter_reset
+	COM set_filter_length
+	COM set_filter_angle
+	COM sel_ref_feat,layers=,use=select,mode=touch,f_types=line\;pad\;surface\;arc\;text,polarity=positive\;negative,include_syms=,exclude_syms=
+	COM get_select_count
+	if ($COMANS > 0) then
+		COM sel_move_other,target_layer=$wkly-neg-tmp,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+	endif
+	VON
+
+	COM reset_filter_criteria,filter_name=,criteria=all
+	COM set_filter_type,filter_name=,lines=no,pads=no,surfaces=no,arcs=yes,text=no
+	COM set_filter_polarity,filter_name=,positive=yes,negative=no
+	COM reset_filter_criteria,filter_name=,criteria=profile
+	COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	COM reset_filter_criteria,filter_name=,criteria=text
+	COM reset_filter_criteria,filter_name=,criteria=dcode
+	COM reset_filter_criteria,filter_name=,criteria=net
+	COM adv_filter_reset
+	COM set_filter_length
+	COM set_filter_angle
+	COM filter_area_strt
+	COM filter_area_end,filter_name=popup,operation=select
+
+	COM arc2lines,arc_line_tol=0.002
+
+	### mark negative features
+
+	COM reset_filter_criteria,filter_name=,criteria=all
+	COM set_filter_type,filter_name=,lines=yes,pads=yes,surfaces=yes,arcs=yes,text=yes
+	COM set_filter_polarity,filter_name=,positive=no,negative=yes
+	COM reset_filter_criteria,filter_name=,criteria=profile
+	COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	COM reset_filter_criteria,filter_name=,criteria=text
+	COM reset_filter_criteria,filter_name=,criteria=dcode
+	COM reset_filter_criteria,filter_name=,criteria=net
+	COM adv_filter_reset
+	COM set_filter_length
+	COM set_filter_angle
+	COM filter_area_strt
+	COM filter_area_end,filter_name=popup,operation=select
+	COM get_select_count 
+	if ($COMANS > 0) then
+		COM cur_atr_reset
+		COM cur_atr_set,attribute=.orig_features,text=arc
+		COM sel_change_atr,mode=add
+	endif
+
+	if ($wkly =~ comp* || $wkly =~ sold*) then
+		set sigchk = ca-outer-sig-opt
+	else
+		set sigchk = ca-line-lay-opt
+	endif
+
+	COM chklist_delete,chklist=$sigchk
+	COM chklist_from_lib,chklist=$sigchk,profile=none,customer=
+	COM chklist_open,chklist=$sigchk
+	COM chklist_cupd,chklist=$sigchk,nact=1,params=((pp_layer=.affected)(pp_action=Spacing)(pp_pad=Shave)(pp_smd=)(pp_bga=)(pp_trace=)(pp_surface=none)(pp_min_pth_ar=$viaring)(pp_opt_pth_ar=4.5)(pp_min_pth2c=5.5)(pp_opt_pth2c=5.5)(pp_min_via_ar=$viaring)(pp_opt_via_ar=$viaring)(pp_min_via2c=5.5)(pp_opt_via2c=5.5)(pp_min_microvia_ar=$lsring)(pp_opt_microvia_ar=$lsring)(pp_min_microvia2c=5.5)(pp_opt_microvia2c=5.5)(pp_min_npth2c=6.5)(pp_opt_npth2c=6.5)(pp_min_spacing=$space)(pp_opt_spacing=$space)(pp_minimal_line_w=3)(pp_optimal_line_w=3)(pp_minimal_surf_w=4.7)(pp_min_peelable=5)(pp_minimal_patch_w=4.7)(pp_selected=All)),mode=regular
+	COM chklist_erf_variable,chklist=$sigchk,nact=1,variable=handle_same_net_spacing,value=Yes,options=2
+	COM chklist_run,chklist=$sigchk,nact=s,area=global,async_run=yes
+	
+	VOF
+	### select new negative features
+
+	COM reset_filter_criteria,filter_name=,criteria=all
+	COM set_filter_type,filter_name=,lines=yes,pads=yes,surfaces=yes,arcs=yes,text=yes
+	COM set_filter_polarity,filter_name=,positive=no,negative=yes
+	COM reset_filter_criteria,filter_name=,criteria=profile
+	COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	COM set_filter_attributes,filter_name=,exclude_attributes=yes,condition=yes,attribute=.orig_features,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=arc
+	COM set_filter_and_or_logic,filter_name=,criteria=exc_attr,logic=and
+	COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	COM reset_filter_criteria,filter_name=,criteria=text
+	COM reset_filter_criteria,filter_name=,criteria=dcode
+	COM reset_filter_criteria,filter_name=,criteria=net
+	COM adv_filter_reset
+	COM set_filter_length
+	COM set_filter_angle
+	COM filter_area_strt
+	COM filter_area_end,filter_name=popup,operation=select
+	COM get_select_count 
+	if ($COMANS > 0) then
+		COM sel_copy_other,dest=layer_name,target_layer=$wkly-arc-neg,invert=yes,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+		
+		COM affected_layer,mode=all,affected=no
+		COM clear_layers
+		COM affected_layer,name=$wkly-arc-neg,mode=single,affected=yes
+
+		COM cur_atr_reset
+		COM cur_atr_set,attribute=.string,text=arc2pad
+		COM sel_change_atr,mode=add
+
+		COM sel_copy_other,dest=layer_name,target_layer=$wkly-arc-tmp,invert=yes,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+
+		COM affected_layer,mode=all,affected=no
+		COM clear_layers
+		COM affected_layer,name=$wkly-neg-tmp,mode=single,affected=yes
+
+		COM sel_move_other,target_layer=$wkly-arc-tmp,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+		COM delete_layer,layer=$wkly-neg-tmp
+
+		COM display_layer,name=$wkly-arc-tmp,display=yes
+		COM display_layer,name=$wkly-arc-neg,display=yes
+		COM display_layer,name=$wkly,display=yes
+		COM work_layer,name=$wkly-arc-tmp
+
+		PAUSE Finished, check the layer $wkly-arc-neg & $wkly-arc-tmp
+	else
+		PAUSE pad shave failed, exit. 
+		exit 
+	endif
+endif
+
