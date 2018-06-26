@@ -1,7 +1,7 @@
 #!/bin/csh
 ##
 # clean the Adtech surface 
-# Update: 2014/04/07: clean_surface: clean_size=0.1,clean_mode=area,max_fold_len=0.01 (4481735-c00)
+# Update: 2015/04/07: clean_surface: clean_size=0.1,clean_mode=area,max_fold_len=0.01 (4481735-c00)
 # 
 source /genesis/sys/scripts/common.cshrc
 
