@@ -1,0 +1,139 @@
+#!/bin/csh
+#
+# check the surface if shaved too much
+#
+
+source /genesis/sys/scripts/common.cshrc
+
+if ("$1" ==  "") then
+	set wkjob = $JOB
+	set wkstep = $STEP
+
+
+    gui_p
+    gui_out WIN 400 200
+    gui_out FONT tbi18
+    gui_out BG 908050
+    gui_out LABEL "select the layer to check netlist"
+    gui_out LABEL "comp-org-mk & sold-org-mk layer are needed"
+    gui_out LIST wkly 4 m
+    gui_out comp
+    gui_out sold
+    gui_out END
+    dogui
+
+else
+	set wkjob = $1
+	set wkstep = $2
+	set wkly = $3
+endif
+
+COM get_job_path,job=$wkjob
+set jobpath = "$COMANS"
+COM get_user_name
+set user = "$COMANS"
+
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+DO_INFO -t step -e $JOB/pcb -m script -d EXISTS
+if ( $gEXISTS == yes ) then
+    COM open_entity,job=$JOB,type=matrix,name=matrix,iconic=no
+    COM open_entity,job=$JOB,type=step,name=pcb,iconic=no
+    set pcb_group = `echo $COMANS`
+    AUX set_group,group=$pcb_group
+    DO_INFO -t layer -e $JOB/pcb/comp-org-mk -d exists
+    if ( $gEXISTS == no ) then
+        COM copy_layer,source_job=$JOB,source_step=pcb,source_layer=comp-out,dest=layer_name,dest_step=,dest_layer=comp-org-mk,mode=replace,invert=no,copy_notes=no,copy_attrs=new_layers_only
+    endif
+    DO_INFO -t layer -e $JOB/pcb/sold-org-mk -d exists
+    if ( $gEXISTS == no ) then
+        COM copy_layer,source_job=$JOB,source_step=pcb,source_layer=sold-out,dest=layer_name,dest_step=,dest_layer=sold-org-mk,mode=replace,invert=no,copy_notes=no,copy_attrs=new_layers_only
+    endif
+endif
+
+
+set tmpjob = pg_tmp
+
+COM open_job,job=$tmpjob,open_win=yes
+AUX set_group,group=98
+COM set_subsystem,name=1-Up-Edit
+COM set_step,name=pcb
+COM open_group,job=$tmpjob,step=pcb,is_sym=no
+set pcb_group = `echo $COMANS`
+AUX set_group,group=$pcb_group
+COM open_entity,job=$tmpjob,type=step,name=pcb,iconic=no
+COM snap_mode,mode=off
+COM top_tab,tab=Display
+VOF
+COM check_inout,job=$tmpjob,mode=out,ent_type=job
+
+COM units,type=inch
+
+foreach a ( 1 2 3 4 5 )
+	COM matrix_delete_row,job=$tmpjob,matrix=matrix,row=1
+end
+echo $wkly
+### create original netlist  
+#COM matrix_insert_layer,job=$tmpjob,matrix=matrix,row=1
+VON
+COM copy_layer,source_job=$wkjob,source_step=$wkstep,source_layer=$wkly-org-mk,dest=layer_name,dest_step=,dest_layer=$wkly,mode=replace,invert=no,copy_notes=no,copy_attrs=new_layers_only
+VOF
+COM matrix_layer_context,job=$tmpjob,matrix=matrix,layer=$wkly,context=board
+COM netlist_page_open,set=yes,job1=pg_tmp,step1=pcb,type1=cur,job2=pg_tmp,step2=pcb,type2=cur
+COM netlist_recalc,job=$tmpjob,step=$STEP,type=cur,etset=,display=top,use_cad_names=no
+COM netlist_ref_update,job=$tmpjob,step=$STEP,source=cur,reduce=no
+echo $wkly
+
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+COM affected_layer,name=$wkly,mode=single,affected=yes
+COM sel_copy_other,dest=layer_name,target_layer=$wkly-orig-mk,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+
+### create current netlist##
+COM copy_layer,source_job=$wkjob,source_step=$wkstep,source_layer=$wkly,dest=layer_name,dest_step=,dest_layer=$wkly,mode=replace,invert=no,copy_notes=no,copy_attrs=new_layers_only
+
+## reduce surface 
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+COM affected_layer,name=$wkly,mode=single,affected=yes
+
+#COM reset_filter_criteria,filter_name=,criteria=all
+#COM set_filter_type,filter_name=,lines=no,pads=no,surfaces=yes,arcs=no,text=no
+#COM set_filter_polarity,filter_name=,positive=yes,negative=no
+#COM reset_filter_criteria,filter_name=,criteria=profile
+#COM reset_filter_criteria,filter_name=,criteria=inc_attr
+#COM set_filter_and_or_logic,filter_name=,criteria=inc_attr,logic=or
+#COM reset_filter_criteria,filter_name=,criteria=exc_attr
+#COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+#COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+#COM reset_filter_criteria,filter_name=,criteria=text
+#COM reset_filter_criteria,filter_name=,criteria=dcode
+#COM reset_filter_criteria,filter_name=,criteria=net
+#COM filter_area_strt
+#COM filter_area_end,filter_name=popup,operation=select
+#COM get_select_count
+#if ($COMANS > 0) then
+	#COM sel_resize,size=-2,corner_ctl=no
+#endif
+COM rv_tab_empty,report=netlist_compare,is_empty=yes
+COM netlist_compare,job2=$tmpjob,step2=$STEP,type2=ref,recalc_cur=yes,use_cad_names=no,report_extra=yes,report_miss_on_cu=yes,report_miss=yes,max_highlight_shapes=50000
+set short = $COMANS[1]
+set open = $COMANS[3]
+set pshort = $COMANS[5]
+set popen = $COMANS[8]
+set result = ($COMANS)
+COM rv_tab_view_results_enabled,report=netlist_compare,is_enabled=yes,serial_num=-1,all_count=-1
+COM rv_tab_empty,report=netlist_compare,is_empty=no
+COM netlist_compare_results_show,action=netlist_compare,is_end_results=yes,is_reference_type=yes,job2=$tmpjob,step2=$STEP
+echo "$user `date` surface_net_check: $short $open" >> $jobpath/user/time_check
+if (-e /tmp/$JOB.net.stop) then
+	rm /tmp/$JOB.net.stop
+endif
+if ($short > 0 || $open > 0 || $pshort > 0 || $popen > 0) then 
+	PAUSE Warning, Found short or open , Please check the surface!
+	touch /tmp/$JOB.net.stop
+else
+	COM close_job,job=pg_tmp
+	COM disp_on
+	COM origin_on
+endif

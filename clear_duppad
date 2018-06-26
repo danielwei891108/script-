@@ -1,0 +1,29 @@
+#!/bin/csh
+
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+while (1) 
+  COM reset_filter_criteria,filter_name=,criteria=all
+
+  PAUSE Please select the duplicated pad then continue.
+
+  COM sel_pattern,tol=1
+  COM get_select_count
+
+  if ($COMANS != 0) then
+        COM chklist_single,show=yes,action=valor_dfm_nfpr
+        COM top_tab,tab=Checklists
+	COM chklist_cupd,chklist=valor_dfm_nfpr,nact=1,params=((pp_layer=.affected)(pp_delete=Duplicate\;Covered)(pp_work=Features)(pp_drill=NPTH)(pp_non_drilled=No)(pp_in_selected=Selected)(pp_remove_mark=Remove)),mode=regular
+	COM chklist_erf_variable,chklist=valor_dfm_nfpr,nact=1,variable=v_tolerance,value=0.4,options=0
+	COM chklist_cnf_act,chklist=valor_dfm_nfpr,nact=1,cnf=no
+	COM chklist_set_hdr,chklist=valor_dfm_nfpr,save_res=no,stop_on_err=no,run=activated,area=global,mask=None,mask_usage=include
+	COM chklist_run,chklist=valor_dfm_nfpr,nact=1,area=global,async_run=no
+	COM get_user_name
+	COM disp_on
+	COM origin_on	
+	COM sel_clear_feat
+	COM clear_highlight
+  else
+	exit 0
+  endif
+end

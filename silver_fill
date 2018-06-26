@@ -1,0 +1,179 @@
+#!/bin/csh
+
+## Clean the duplicated round pad
+## 
+
+source /genesis/sys/scripts/common.cshrc
+gui_p
+gui_out WIN 400 200
+gui_out FONT tbi18
+gui_out BG 809050
+gui_out LABEL select the layers to clear the signal
+gui_out LIST lay 5 m
+gui_out comp
+gui_out sold
+gui_out exit
+gui_out END
+gui_out TEXT slvsize 4 Sliver Size
+gui_out DTEXT slvsize 2.5
+dogui
+
+if ("$lay" == "exit") then
+        exit 0
+endif
+
+set checkchk = sliver-fill
+set repairchk = sliver
+set holemk = hole-mk
+set slvmk = repair-mk
+
+VOF
+## check the hole
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+foreach wkly ($lay)
+	
+	COM delete_layer,layer=$wkly-slv-mk
+	COM delete_layer,layer=$wkly-slv-mk
+	COM delete_layer,layer=$wkly-$holemk
+	COM delete_layer,layer=$wkly-$slvmk
+	COM delete_layer,layer=ms_1_$wkly
+	COM delete_layer,layer=ms_2_$wkly
+	COM delete_layer,layer=mk_1_$wkly
+	COM delete_layer,layer=mk_2_$wkly
+
+	COM affected_layer,name=$wkly,mode=single,affected=yes 
+
+end
+
+## check hole
+COM chklist_delete,chklist=$checkchk
+COM chklist_from_lib,chklist=$checkchk,profile=none,customer=
+COM chklist_open,chklist=$checkchk
+COM chklist_show,chklist=$checkchk,nact=1,pinned=yes,pinned_enabled=yes
+COM top_tab,tab=Checklists
+COM chklist_cupd,chklist=$checkchk,nact=2,params=((pp_layer=.affected)(pp_repair_content=Pinhole)(pp_max_sliver=0)(pp_max_peelable=0)(pp_max_txt_sliver=0)(pp_spacing=0)(pp_min_ar=0)(pp_max_hole=4.5)(pp_max_island=4)(pp_max_angle=90.000000)(pp_hole_measure_mode=Width)(pp_overlap=1)(pp_tangency=1)(pp_tan_work_on=Lines)(pp_sliver_cover_f=Surfaces)(pp_hole_cover_f=Surfaces)(pp_repair=Report)(pp_selected=All)),mode=regular
+COM chklist_cnf_act,chklist=$checkchk,nact=2,cnf=no
+COM chklist_run,chklist=$checkchk,nact=2,area=global,async_run=yes
+COM chklist_create_lyrs,chklist=$checkchk,severity=3,suffix=
+
+foreach wkly ($lay)
+		
+        COM clear_layers
+        COM affected_layer,mode=all,affected=no
+        COM affected_layer,name=${wkly},mode=single,affected=yes
+	COM sel_copy_other,dest=layer_name,target_layer=$wkly-slv-mk,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+        COM affected_layer,mode=all,affected=no
+        COM affected_layer,name=ms_2_${wkly},mode=single,affected=yes
+        COM sel_move_other,target_layer=$wkly-$holemk,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+
+end
+
+### check again
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+foreach wkly ($lay)
+	COM affected_layer,name=$wkly,mode=single,affected=yes 
+end
+
+COM chklist_delete,chklist=$checkchk
+COM chklist_from_lib,chklist=$checkchk,profile=none,customer=
+COM chklist_open,chklist=$checkchk
+COM chklist_show,chklist=$checkchk,nact=1,pinned=yes,pinned_enabled=yes
+COM chklist_run,chklist=$checkchk,nact=s,area=global,async_run=yes
+COM chklist_create_lyrs,chklist=$checkchk,severity=3,suffix=
+
+foreach wkly ($lay)
+		
+        COM clear_layers
+        COM affected_layer,mode=all,affected=no
+        COM affected_layer,name=ms_1_${wkly},mode=single,affected=yes
+        COM sel_move_other,target_layer=$wkly-$slvmk,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+        COM affected_layer,name=ms_2_${wkly},mode=single,affected=yes
+        COM sel_move_other,target_layer=$wkly-$slvmk,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+end
+
+
+### sliver repair 
+
+#COM clear_layers
+#COM affected_layer,mode=all,affected=no
+#foreach wkly ($lay)
+	#
+	#COM affected_layer,name=$wkly,mode=single,affected=yes 
+#end
+#
+#COM chklist_delete,chklist=$repairchk
+#COM chklist_from_lib,chklist=$repairchk,profile=none,customer=
+#COM chklist_open,chklist=$repairchk
+#COM chklist_show,chklist=$repairchk,nact=1,pinned=yes,pinned_enabled=yes
+#COM chklist_run,chklist=$repairchk,nact=s,area=global,async_run=yes
+
+
+#foreach wkly ($lay)
+	
+	#COM clear_layers
+	#COM affected_layer,mode=all,affected=no
+	#COM affected_layer,name=$wkly,mode=single,affected=yes 
+#
+	#COM sel_clear_feat
+	#COM clear_highlight
+	#COM reset_filter_criteria,filter_name=,criteria=all
+	#COM set_filter_type,filter_name=,lines=yes,pads=yes,surfaces=yes,arcs=yes,text=yes
+	#COM set_filter_polarity,filter_name=,positive=yes,negative=yes
+	#COM reset_filter_criteria,filter_name=,criteria=profile
+	#COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	#COM set_filter_attributes,filter_name=,exclude_attributes=no,condition=no,attribute=.patch,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=
+	#COM set_filter_and_or_logic,filter_name=,criteria=inc_attr,logic=and
+	#COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	#COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	#COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	#COM reset_filter_criteria,filter_name=,criteria=text
+	#COM reset_filter_criteria,filter_name=,criteria=net
+	#COM filter_area_strt
+	#COM filter_area_end,filter_name=popup,operation=select
+#
+	#COM get_select_count
+	#if ($COMANS > 0) then
+		#COM sel_copy_other,dest=layer_name,target_layer=$wkly-$holemk,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+#
+	#endif
+#
+#end
+
+
+
+### delete the feature outside profile
+foreach wkly ($wkly-$slvmk $wkly-$holemk)
+        COM clear_layers
+        COM affected_layer,mode=all,affected=no
+        COM affected_layer,name=$wkly,mode=single,affected=yes
+	COM reset_filter_criteria,filter_name=,criteria=all
+	COM set_filter_type,filter_name=,lines=yes,pads=yes,surfaces=yes,arcs=yes,text=yes
+	COM set_filter_polarity,filter_name=,positive=yes,negative=yes
+	COM set_filter_profile,filter_name=,mode=2
+	COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	COM reset_filter_criteria,filter_name=,criteria=text
+	COM reset_filter_criteria,filter_name=,criteria=dcode
+	COM reset_filter_criteria,filter_name=,criteria=net
+	COM filter_area_strt
+	COM filter_area_end,filter_name=popup,operation=select
+	COM get_select_count
+	if ($COMANS > 0) then
+		COM sel_delete
+	endif
+endif
+
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+foreach wkly ($lay)
+	COM delete_layer,layer=ms_1_$wkly
+	COM delete_layer,layer=ms_2_$wkly
+	COM delete_layer,layer=mk_1_$wkly
+	COM delete_layer,layer=mk_2_$wkly
+	COM delete_layer,layer=$wkly+++
+end
+

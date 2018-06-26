@@ -1,0 +1,92 @@
+#!/bin/csh
+
+source /genesis/sys/scripts/common.cshrc
+VOF 
+#COM delete_layer,layer=$wkly-smdsp-bk
+#COM delete_layer,layer=$wkly-smdsp
+#COM delete_layer,layer=$wkly-smdsp+++
+#VON
+
+if ("$1" == "") then
+	gui_p
+	gui_out WIN 400 200
+	gui_out FONT tbi18
+	gui_out BG 809050
+	gui_out FORM
+	gui_out TEXT smdsp 4 smd space
+	gui_out DTEXT smdsp 4.7
+	gui_out TEXT smdlimit 4 smd limit
+	gui_out DTEXT smdlimit 1
+	gui_out TEXT bgalimit 4 bga limit
+	gui_out DTEXT bgalimit 0.3
+	gui_out ENDFORM
+	gui_out LABEL select the layers to define the solder_defined pad
+	gui_out LIST wkly 5 s
+	gui_out comp
+	gui_out sold
+	gui_out exit
+	gui_out END
+	dogui
+
+	if ($wkly == exit ) then
+		exit 
+	endif
+	
+	COM clear_layers
+	COM affected_layer,mode=all,affected=no
+	COM display_layer,name=$wkly,display=yes
+	COM work_layer,name=$wkly
+	COM sel_copy_other,dest=layer_name,target_layer=$wkly-smdsp-bk,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0,rotation=0
+
+	SEL:
+	COM reset_filter_criteria,filter_name=,criteria=all
+
+	PAUSE Please select the SMD pad then continue
+else
+	set wkly = $1
+	set smdsp = $2
+	set smdlimit = $3
+	set bgalimit = $4
+endif
+
+COM get_select_count
+
+if ($COMANS < 2) then
+	PAUSE Error, At least select 2 SMD pads
+	goto SEL
+else
+	COM sel_move_other,target_layer=$wkly-smdsp,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+endif
+
+COM units,type=inch
+## checklist ##
+
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+COM affected_layer,name=$wkly-smdsp,mode=single,affected=yes
+
+COM chklist_delete,chklist=smd-space
+COM chklist_from_lib,chklist=smd-space,profile=none,customer=
+COM chklist_open,chklist=smd-space
+COM chklist_show,chklist=smd-space,nact=1,pinned=yes,pinned_enabled=yes
+COM top_tab,tab=Checklists
+COM chklist_cupd,chklist=smd-space,nact=1,params=((pp_layer=$wkly-smdsp)(pp_action=Spacing)(pp_pad=)(pp_smd=Shave)(pp_bga=Shave BGA pads)(pp_trace=)(pp_surface=Reshape)(pp_min_pth_ar=3)(pp_opt_pth_ar=3)(pp_min_pth2c=5)(pp_opt_pth2c=0)(pp_min_via_ar=3)(pp_opt_via_ar=3)(pp_min_via2c=5)(pp_opt_via2c=0)(pp_min_microvia_ar=3)(pp_opt_microvia_ar=3)(pp_min_microvia2c=5)(pp_opt_microvia2c=0)(pp_min_npth2c=5)(pp_opt_npth2c=0)(pp_min_spacing=$smdsp)(pp_opt_spacing=$smdsp)(pp_minimal_line_w=3.6)(pp_optimal_line_w=5)(pp_minimal_surf_w=5)(pp_min_peelable=5)(pp_minimal_patch_w=4)(pp_selected=All)),mode=regular
+COM chklist_erf_variable,chklist=smd-space,nact=1,variable=limit_bga_shaving,value=$bgalimit,options=0
+COM chklist_erf_variable,chklist=smd-space,nact=1,variable=limit_smd_shaving,value=$smdlimit,options=0
+
+COM chklist_cnf_act,chklist=smd-space,nact=1,cnf=no
+COM chklist_run,chklist=smd-space,nact=s,area=global,async_run=yes
+
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+COM affected_layer,name=$wkly,mode=single,affected=yes
+COM sel_move_other,target_layer=$wkly-smdsp,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+COM affected_layer,name=$wkly-smdsp,mode=single,affected=yes
+COM sel_move_other,target_layer=$wkly,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+
+COM sel_options,clear_mode=clear_after,display_mode=all_layers,area_inout=inside,area_select=select,select_mode=standard,area_touching_mode=exclude
+COM reset_filter_criteria,filter_name=,criteria=all
+COM affected_layer,mode=all,affected=no

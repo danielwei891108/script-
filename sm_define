@@ -1,0 +1,164 @@
+#!/bin/csh
+#
+# normal clearance : .string = normal
+# same clearance : .string = same
+# small clearance : .string = small
+# partially clearance : .string = partially
+#
+
+if ("$1" == "") then
+	set wkly = comp
+	set smly = csm
+else
+	set wkly = $1
+	set smly = $2
+endif
+
+VOF
+COM delete_layer,layer=$wkly-smd-bga
+
+if ($JOB =~ q[8q]9*) then
+	source $INCAM_SERVER/site_data/scripts/terence/sm-clearup $smly
+endif
+### select all the smd & bga pads
+COM clear_layers
+COM affected_layer,mode=all,affected=no
+COM affected_layer,name=$wkly,mode=single,affected=yes
+
+COM reset_filter_criteria,filter_name=,criteria=all
+COM set_filter_type,filter_name=,lines=no,pads=yes,surfaces=no,arcs=no,text=no
+COM set_filter_polarity,filter_name=,positive=yes,negative=no
+COM reset_filter_criteria,filter_name=,criteria=profile
+COM reset_filter_criteria,filter_name=,criteria=inc_attr
+COM set_filter_attributes,filter_name=,exclude_attributes=no,condition=no,attribute=.bga,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=
+COM set_filter_attributes,filter_name=,exclude_attributes=no,condition=no,attribute=.smd,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=
+COM set_filter_attributes,filter_name=,exclude_attributes=no,condition=no,attribute=.copper_defined,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=
+COM set_filter_and_or_logic,filter_name=,criteria=inc_attr,logic=or
+COM reset_filter_criteria,filter_name=,criteria=exc_attr
+COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+COM reset_filter_criteria,filter_name=,criteria=text
+COM reset_filter_criteria,filter_name=,criteria=dcode
+COM reset_filter_criteria,filter_name=,criteria=net
+COM filter_area_strt
+COM filter_area_end,filter_name=popup,operation=select
+COM get_select_count
+if ($COMANS > 0) then
+	COM sel_copy_other,dest=layer_name,target_layer=$wkly-smd-bga,invert=no,dx=0,dy=0,size=0.3,x_anchor=0,y_anchor=0
+
+		## NFP ##
+	COM clear_layers
+	COM affected_layer,mode=all,affected=no
+	COM affected_layer,name=$wkly-smd-bga,mode=single,affected=yes
+	
+	COM chklist_single,show=yes,action=valor_dfm_nfpr
+    COM top_tab,tab=Checklists
+	COM chklist_cupd,chklist=valor_dfm_nfpr,nact=1,params=((pp_layer=$wkly-smd-bga)(pp_delete=Duplicate\;Covered)(pp_work=Features)(pp_drill=NPTH)(pp_non_drilled=No)(pp_in_selected=All)(pp_remove_mark=Repair)),mode=regular
+	COM chklist_erf_variable,chklist=valor_dfm_nfpr,nact=1,variable=v_tolerance,value=0.4,options=0
+	COM chklist_cnf_act,chklist=valor_dfm_nfpr,nact=1,cnf=no
+	COM chklist_set_hdr,chklist=valor_dfm_nfpr,save_res=no,stop_on_err=no,run=activated,area=global,mask=None,mask_usage=include
+	COM chklist_run,chklist=valor_dfm_nfpr,nact=1,area=global,async_run=no
+	COM get_user_name
+	COM disp_on
+	COM origin_on	
+	
+	
+	COM clear_layers
+	COM affected_layer,mode=all,affected=no
+	COM affected_layer,name=$smly,mode=single,affected=yes
+
+	COM reset_filter_criteria,filter_name=,criteria=all
+	COM set_filter_type,filter_name=,lines=no,pads=yes,surfaces=no,arcs=no,text=no
+	COM set_filter_polarity,filter_name=,positive=yes,negative=no
+	COM reset_filter_criteria,filter_name=,criteria=profile
+	COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	COM reset_filter_criteria,filter_name=,criteria=text
+	COM reset_filter_criteria,filter_name=,criteria=dcode
+	COM reset_filter_criteria,filter_name=,criteria=net
+	COM sel_ref_feat,layers=$wkly-smd-bga,use=filter,mode=include,f_types=line\;pad\;surface\;arc\;text,polarity=positive\;negative,include_syms=,exclude_syms=
+	COM get_select_count
+	if ($COMANS > 0) then
+		COM cur_atr_reset
+		COM cur_atr_set,attribute=.string,text=normal
+		COM sel_change_atr,mode=add
+	endif
+	
+	COM sel_ref_feat,layers=$wkly-smd-bga,use=filter,mode=cover,f_types=line\;pad\;surface\;arc\;text,polarity=positive\;negative,include_syms=,exclude_syms=
+	COM get_select_count
+	if ($COMANS > 0) then
+		COM cur_atr_reset
+		COM cur_atr_set,attribute=.string,text=partially
+		COM sel_change_atr,mode=add
+	endif	
+	
+	COM clear_layers
+	COM affected_layer,mode=all,affected=no
+	COM affected_layer,name=$wkly-smd-bga,mode=single,affected=yes
+	COM sel_resize,size=-0.5,corner_ctl=no
+	
+	COM clear_layers
+	COM affected_layer,mode=all,affected=no
+	COM affected_layer,name=$smly,mode=single,affected=yes	
+	COM reset_filter_criteria,filter_name=,criteria=all
+	COM set_filter_type,filter_name=,lines=no,pads=yes,surfaces=no,arcs=no,text=no
+	COM set_filter_polarity,filter_name=,positive=yes,negative=no
+	COM reset_filter_criteria,filter_name=,criteria=profile
+	COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	COM set_filter_attributes,filter_name=,exclude_attributes=no,condition=yes,attribute=.string,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=partially
+	COM set_filter_and_or_logic,filter_name=,criteria=inc_attr,logic=or
+	COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	COM reset_filter_criteria,filter_name=,criteria=text
+	COM reset_filter_criteria,filter_name=,criteria=dcode
+	COM reset_filter_criteria,filter_name=,criteria=net
+	COM sel_ref_feat,layers=$wkly-smd-bga,use=filter,mode=include,f_types=line\;pad\;surface\;arc\;text,polarity=positive\;negative,include_syms=,exclude_syms=
+	COM get_select_count
+	if ($COMANS > 0) then
+		COM cur_atr_reset
+		COM cur_atr_set,attribute=.string,text=same
+		COM sel_change_atr,mode=add
+	endif
+	
+	COM sel_ref_feat,layers=$wkly-smd-bga,use=filter,mode=cover,f_types=line\;pad\;surface\;arc\;text,polarity=positive\;negative,include_syms=,exclude_syms=
+	COM get_select_count
+	if ($COMANS > 0) then
+		COM cur_atr_reset
+		COM cur_atr_set,attribute=.string,text=small
+		COM sel_change_atr,mode=add
+	endif		
+	
+	COM reset_filter_criteria,filter_name=,criteria=all
+	COM set_filter_type,filter_name=,lines=no,pads=yes,surfaces=no,arcs=no,text=no
+	COM set_filter_polarity,filter_name=,positive=yes,negative=no
+	COM reset_filter_criteria,filter_name=,criteria=profile
+	COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	COM set_filter_attributes,filter_name=,exclude_attributes=yes,condition=no,attribute=.string,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=
+	COM set_filter_and_or_logic,filter_name=,criteria=exc_attr,logic=or
+	COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	COM reset_filter_criteria,filter_name=,criteria=text
+	COM reset_filter_criteria,filter_name=,criteria=dcode
+	COM reset_filter_criteria,filter_name=,criteria=net
+	COM sel_ref_feat,layers=$wkly-smd-bga,use=filter,mode=touch,f_types=line\;pad\;surface\;arc\;text,polarity=positive\;negative,include_syms=,exclude_syms=
+
+	COM get_select_count
+	if ($COMANS > 0) then
+		COM cur_atr_reset
+		COM cur_atr_set,attribute=.string,text=partially
+		COM sel_change_atr,mode=add
+	endif
+
+	## make a backup
+	COM clear_layers
+	COM affected_layer,mode=all,affected=no
+	COM affected_layer,name=$smly,mode=single,affected=yes
+	COM sel_copy_other,dest=layer_name,target_layer=$smly-org,invert=no,dx=0,dy=0,size=0,x_anchor=0,y_anchor=0
+
+endif
+COM delete_layer,layer=$wkly-smd-bga
+COM delete_layer,layer=$wkly-smd-bga+++

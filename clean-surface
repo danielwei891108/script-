@@ -1,0 +1,163 @@
+#!/bin/csh
+##
+# clean the Adtech surface 
+# Update: 2015/04/07: clean_surface: clean_size=0.1,clean_mode=area,max_fold_len=0.01 (4481735-c00)
+# 
+source /genesis/sys/scripts/common.cshrc
+
+
+if (! $?JOB) then
+	PAUSE Please open a step first
+	exit 
+endif
+
+COM get_job_path,job=$JOB
+set jobpath = "$COMANS"
+
+COM units,type=inch
+
+COM sel_options,clear_mode=clear_none,display_mode=all_layers,area_inout=inside,area_select=select,select_mode=standard,area_touching_mode=exclude
+if ($1 == "") then
+	COM affected_layer,mode=all,affected=no
+	COM affected_filter,filter=(type=signal|power_ground&context=board&pol=positive)
+	COM get_affect_layer
+
+	set bdlayer = ($COMANS)
+	COM affected_layer,mode=all,affected=no
+
+	gui_p
+	gui_out WIN 400 200
+	gui_out FONT tbi18
+	gui_out BG 809050
+	gui_out LABEL Clean surface
+	gui_out LIST ly 10 m
+	foreach l ($bdlayer)
+		gui_out $l
+	end
+	gui_out __exit
+	gui_out END
+	
+	dogui
+	
+	if ("$ly" == "__exit") then
+		exit 0
+	endif
+	
+	
+	VOF
+	COM affected_layer,mode=all,affected=no
+	foreach l ($ly)
+		COM affected_layer,name=$l,mode=single,affected=yes
+		echo $l >> $jobpath/user/detch.done
+	end
+else if ($1 == "all") then
+	COM affected_layer,mode=all,affected=no
+	COM affected_filter,filter=(type=signal|power_ground&context=board&pol=positive)
+	COM get_affect_layer
+endif
+VOF
+
+COM get_affect_layer
+echo $COMANS >> $jobpath/user/detch.done
+set afly = ($COMANS)
+
+COM get_select_count
+echo $afly $COMANS >> /tmp/detch
+
+if ($COMANS == 0) then
+	### select the surface
+	COM reset_filter_criteria,filter_name=,criteria=all
+	COM set_filter_type,filter_name=,lines=no,pads=no,surfaces=yes,arcs=no,text=no
+	COM set_filter_polarity,filter_name=,positive=yes,negative=no
+	COM reset_filter_criteria,filter_name=,criteria=profile
+	COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	COM set_filter_attributes,filter_name=,exclude_attributes=no,condition=no,attribute=.detch_orig_nf,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=
+	COM set_filter_and_or_logic,filter_name=,criteria=inc_attr,logic=and
+	COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	COM reset_filter_criteria,filter_name=,criteria=text
+	COM reset_filter_criteria,filter_name=,criteria=dcode
+	COM reset_filter_criteria,filter_name=,criteria=net
+	COM adv_filter_reset
+	COM set_filter_length
+	COM set_filter_angle
+	COM filter_area_strt
+	COM filter_area_end,filter_name=popup,operation=select
+	if ($COMANS > 0) then	
+		COM sel_clean_surface,accuracy=0.006,clean_size=0.1,clean_mode=area,max_fold_len=0.01
+		#COM sel_clean_surface,accuracy=0.01,clean_size=0,clean_mode=x_and_y,max_fold_len=0
+		touch /tmp/clean-surface
+	endif
+
+        COM cur_atr_reset
+        COM sel_delete_atr,mode=list,attributes=.detch_orig_nf\;
+
+	COM sel_clear_feat
+endif
+
+COM sel_options,clear_mode=clear_afer,display_mode=all_layers,area_inout=inside,area_select=select,select_mode=standard,area_touching_mode=exclude
+
+
+### remove the covered .detch_comp surfaces
+
+foreach wkly ($afly)
+	COM clear_layers
+	COM affected_layer,mode=all,affected=no
+	COM affected_layer,name=$wkly,mode=single,affected=yes
+
+	COM reset_filter_criteria,filter_name=,criteria=all
+	COM set_filter_type,filter_name=,lines=yes,pads=yes,surfaces=yes,arcs=yes,text=yes
+	COM set_filter_polarity,filter_name=,positive=yes,negative=no
+	COM reset_filter_criteria,filter_name=,criteria=profile
+	COM reset_filter_criteria,filter_name=,criteria=inc_attr
+	COM reset_filter_criteria,filter_name=,criteria=exc_attr
+	COM set_filter_attributes,filter_name=,exclude_attributes=yes,condition=no,attribute=.detch_comp,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=
+	COM set_filter_and_or_logic,filter_name=,criteria=exc_attr,logic=and
+	COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+	COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+	COM reset_filter_criteria,filter_name=,criteria=text
+	COM reset_filter_criteria,filter_name=,criteria=dcode
+	COM reset_filter_criteria,filter_name=,criteria=net
+	COM adv_filter_reset
+	COM set_filter_length
+	COM set_filter_angle
+	COM filter_area_strt
+	COM filter_area_end,filter_name=popup,operation=select
+	COM get_select_count
+	if ($COMANS > 0) then 
+		COM reset_filter_criteria,filter_name=,criteria=all
+		COM set_filter_type,filter_name=,lines=yes,pads=yes,surfaces=yes,arcs=yes,text=yes
+		COM set_filter_polarity,filter_name=,positive=yes,negative=no
+		COM reset_filter_criteria,filter_name=,criteria=profile
+		COM reset_filter_criteria,filter_name=,criteria=inc_attr
+		COM set_filter_attributes,filter_name=,exclude_attributes=no,condition=no,attribute=.detch_comp,min_int_val=0,max_int_val=0,min_float_val=0,max_float_val=0,option=,text=
+		COM set_filter_and_or_logic,filter_name=,criteria=inc_attr,logic=and
+		COM reset_filter_criteria,filter_name=,criteria=exc_attr
+		COM set_filter_symbols,filter_name=,exclude_symbols=no,symbols=
+		COM set_filter_symbols,filter_name=,exclude_symbols=yes,symbols=
+		COM reset_filter_criteria,filter_name=,criteria=text
+		COM reset_filter_criteria,filter_name=,criteria=dcode
+		COM reset_filter_criteria,filter_name=,criteria=net
+		COM adv_filter_reset
+		COM set_filter_length
+		COM set_filter_angle
+		COM sel_ref_feat,layers=,use=select,mode=cover,f_types=line\;pad\;surface\;arc\;text,polarity=positive\;negative,include_syms=,exclude_syms=
+		COM get_select_count
+		if ($COMANS > 0) then
+			COM sel_delete
+		endif
+	endif
+end
+
+COM affected_layer,mode=all,affected=no
+if ($1 == "" || $1 == "all") then
+	COM affected_layer,mode=all,affected=no
+else
+	foreach wkly ($afly)
+		COM affected_layer,name=$wkly,mode=single,affected=yes
+	end
+	
+endif
+
+exit
